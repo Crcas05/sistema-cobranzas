@@ -141,53 +141,6 @@ header {visibility:hidden;}
     margin-bottom:10px;
 }
 
-/* TABLAS */
-
-.custom-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-.custom-table th{
-    text-align:left;
-    background:#f8fafc;
-    color:#334155;
-    padding:12px;
-    font-size:15px;
-}
-
-.custom-table td{
-    padding:12px;
-    border-bottom:1px solid #e2e8f0;
-    color:#0f172a;
-    font-size:15px;
-}
-
-.estado-vencido{
-    color:#ef4444;
-    font-weight:700;
-}
-
-.estado-porvencer{
-    color:#16a34a;
-    font-weight:700;
-}
-
-.riesgo-alto{
-    color:#ef4444;
-    font-weight:700;
-}
-
-.riesgo-medio{
-    color:#f59e0b;
-    font-weight:700;
-}
-
-.riesgo-bajo{
-    color:#16a34a;
-    font-weight:700;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -312,7 +265,9 @@ if menu == "Dashboard":
 
     total_cobrar = df["Saldo_Pendiente"].sum()
 
-    vencidos = df[df["Estado_Pago"] == "Pendiente"]["Saldo_Pendiente"].sum()
+    vencidos = df[
+        df["Estado_Pago"] == "Pendiente"
+    ]["Saldo_Pendiente"].sum()
 
     clientes_riesgo = len(
         df[df["Nivel_Riesgo"] == "Alto"]
@@ -416,11 +371,9 @@ if menu == "Dashboard":
             height=420,
             paper_bgcolor="white",
             plot_bgcolor="white",
+            font=dict(color="#111827"),
             legend=dict(
-                font=dict(
-                    size=18,
-                    color="#111827"
-                )
+                font=dict(size=18)
             )
         )
 
@@ -429,20 +382,7 @@ if menu == "Dashboard":
             use_container_width=True
         )
 
-        st.markdown("""
-        <div style='padding-left:30px;padding-bottom:20px;'>
-
-        <p style='font-size:18px;color:#22c55e;font-weight:700;'>
-        ● Por Vencer
-        </p>
-
-        <p style='font-size:18px;color:#ef4444;font-weight:700;'>
-        ● Vencida
-        </p>
-
-        </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # LINEA
 
@@ -455,7 +395,9 @@ if menu == "Dashboard":
         </div>
         """, unsafe_allow_html=True)
 
-        serie = df.groupby("Region")["Monto_Deuda"].sum().reset_index()
+        serie = df.groupby(
+            "Region"
+        )["Monto_Deuda"].sum().reset_index()
 
         fig2 = px.line(
             serie,
@@ -480,12 +422,6 @@ if menu == "Dashboard":
             font=dict(
                 size=15,
                 color="#111827"
-            ),
-            xaxis=dict(
-                tickfont=dict(size=14,color="#111827")
-            ),
-            yaxis=dict(
-                tickfont=dict(size=14,color="#111827")
             ),
             showlegend=False
         )
@@ -518,40 +454,38 @@ if menu == "Dashboard":
             "Fecha_Vencimiento"
         ).head(8)
 
-        html_pagos = """
-        <table class='custom-table'>
-        <tr>
-            <th>Cliente</th>
-            <th>Monto</th>
-            <th>Vencimiento</th>
-            <th>Estado</th>
-        </tr>
-        """
+        tabla_pagos = pagos[[
+            "Nombre_Completo",
+            "Saldo_Pendiente",
+            "Fecha_Vencimiento",
+            "Dias_Atraso"
+        ]].copy()
 
-        for _,row in pagos.iterrows():
+        tabla_pagos.columns = [
+            "Cliente",
+            "Monto",
+            "Vencimiento",
+            "Estado"
+        ]
 
-            estado = "Vencido"
+        tabla_pagos["Monto"] = tabla_pagos["Monto"].apply(
+            lambda x: f"S/ {x:,.0f}"
+        )
 
-            clase = "estado-vencido"
+        tabla_pagos["Vencimiento"] = tabla_pagos[
+            "Vencimiento"
+        ].dt.strftime("%d/%m/%Y")
 
-            if row["Dias_Atraso"] <= 0:
-                estado = "Por Vencer"
-                clase = "estado-porvencer"
+        tabla_pagos["Estado"] = tabla_pagos[
+            "Estado"
+        ].apply(
+            lambda x: "Vencido" if x > 0 else "Por Vencer"
+        )
 
-            html_pagos += f"""
-            <tr>
-                <td>{row['Nombre_Completo']}</td>
-                <td>S/ {row['Saldo_Pendiente']:,.0f}</td>
-                <td>{row['Fecha_Vencimiento'].strftime('%d/%m/%Y')}</td>
-                <td class='{clase}'>{estado}</td>
-            </tr>
-            """
-
-        html_pagos += "</table>"
-
-        st.markdown(
-            html_pagos,
-            unsafe_allow_html=True
+        st.dataframe(
+            tabla_pagos,
+            use_container_width=True,
+            hide_index=True
         )
 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -567,42 +501,20 @@ if menu == "Dashboard":
         </div>
         """, unsafe_allow_html=True)
 
-        riesgo = df.head(8)
+        riesgo = df[[
+            "Nombre_Completo",
+            "Nivel_Riesgo"
+        ]].head(8)
 
-        html_riesgo = """
-        <table class='custom-table'>
-        <tr>
-            <th>Cliente</th>
-            <th>Estado</th>
-        </tr>
-        """
+        riesgo.columns = [
+            "Cliente",
+            "Nivel de Riesgo"
+        ]
 
-        for _,row in riesgo.iterrows():
-
-            nivel = row["Nivel_Riesgo"]
-
-            clase = "riesgo-bajo"
-
-            if nivel == "Alto":
-                clase = "riesgo-alto"
-
-            elif nivel == "Medio":
-                clase = "riesgo-medio"
-
-            html_riesgo += f"""
-            <tr>
-                <td>{row['Nombre_Completo']}</td>
-                <td class='{clase}'>
-                    Riesgo {nivel}
-                </td>
-            </tr>
-            """
-
-        html_riesgo += "</table>"
-
-        st.markdown(
-            html_riesgo,
-            unsafe_allow_html=True
+        st.dataframe(
+            riesgo,
+            use_container_width=True,
+            hide_index=True
         )
 
         st.markdown("</div>", unsafe_allow_html=True)
